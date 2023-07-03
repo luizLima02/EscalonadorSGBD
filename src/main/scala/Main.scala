@@ -1,8 +1,6 @@
 import scala.compiletime.ops.any
 import scala.compiletime.ops.string
-//tipos auxiliares
-case class NumPos(num: String, pos: Int)
-
+import scala.collection.immutable.Range.Int
 
 //tipos fixos
 enum Estado:
@@ -19,6 +17,11 @@ enum TipoBlock:
 
 enum NivelIsol:
   case READ_UNCOMMIT, READ_COMMIT, READ_REPEAT, SERIALIZE
+
+//tipos auxiliares
+case class NumPos(num: String, pos: Int)
+//wait item
+case class ItemWait(var waiting:List[Int])
 
 //traits
 trait locksMan {
@@ -60,10 +63,10 @@ def remove_listaPos[A](lista:List[A], posF:Int ,posI:Int = 0): List[A] = {
   }
 }
 //funcao auxiliar lista para linha separada por / e com uma quebra de linha no final
-def compos_lista[A](lista:List[A]):String = {
+def compos_lista[A](lista:List[A], divisor:String = " / " ):String = {
   lista match
-    case head :: next => head.toString() + "/ " + compos_lista[A](next)
-    case Nil => "\n"
+    case head :: next => head.toString() + divisor + compos_lista[A](next, divisor)
+    case Nil => ""
 }
 //funcao auxiliar lista pega a posicao do valor passado ou valor negativo se nao tiver
 def getListaPos[A](lista:List[A], valor:A):Int = {
@@ -75,6 +78,30 @@ def getListaPos[A](lista:List[A], valor:A):Int = {
     }
     case Nil => -1
 }
+def getListaPosValue[A](lista:List[A], posF:Int ,posI:Int = 0):A = {
+  if(posF > posI){
+    lista match
+      case head :: next => getListaPosValue(next, posF, posI + 1)
+      case Nil => lista.last
+  }else{
+    lista match
+      case head :: next => head
+      case Nil => lista.last
+  }
+}
+//muda a posicao especificada da lista se ela nao estiver vazia
+def changeListaPos[A](lista:List[A], valor:A, posF:Int ,posI:Int = 0):List[A] = {
+  if(posF > posI){
+    lista match
+      case head :: next => head::changeListaPos(next,valor, posF, posI + 1)
+      case Nil => Nil
+  }else{
+    lista match
+      case head :: next => valor::next
+      case Nil => Nil    
+  }
+}
+
 //grafo wait-for
 class Wait_For(size: Int) {
   // variaveis
@@ -113,6 +140,55 @@ class Wait_For(size: Int) {
   }
 }
 
+//wait item
+class Wait_Item{
+  var items:List[String] = Nil
+  var waiting:List[ItemWait] = Nil
+  //adiciona um item e um tr que o espera
+
+  def add_wait(item:String, tr:Int) = {
+    val k = getListaPos(this.items, item)
+    if(k == -1){
+      this.items = add_lista(this.items, item)
+      this.waiting  = add_lista(this.waiting, ItemWait(tr::Nil))
+    }else{
+      var valor = getListaPosValue(this.waiting, k)
+      valor.waiting match
+        case h::n => valor.waiting = add_lista(valor.waiting, tr)
+        case Nil  => 
+      this.waiting = changeListaPos(this.waiting, valor, k)
+    }
+  }
+  def remove_wait(item:String) = {
+    val k = getListaPos(this.items, item)
+    if(k == -1){
+  
+    }else{
+      var valor = getListaPosValue(this.waiting, k)
+      valor.waiting match
+        case h::n => valor.waiting = remove_listaPos(valor.waiting, 0)
+        case Nil  => 
+      valor.waiting match
+        case h::n => this.waiting = changeListaPos(this.waiting, valor, k)
+        case Nil  => this.items = remove_listaPos(this.items, k)
+                     this.waiting = remove_listaPos(this.waiting, k)
+      
+    }
+  }
+
+  def printEstadoAtual():String = {
+     var s = ""
+     def percorrerLista(item:List[String], waiting:List[ItemWait]):String = {
+      item match
+        case itemH :: itemN => waiting match
+                    case waitingH :: waitingN =>  itemH + ", [ " + compos_lista(waitingH.waiting, ", ") + " ]\n" + percorrerLista(itemN, waitingN)
+                    case Nil => ""
+        case Nil => ""
+     } 
+     s = percorrerLista(this.items, this.waiting)
+     s
+  }
+}
 //trManager
 class TrManager {
 //ids
@@ -123,18 +199,31 @@ class TrManager {
   var Status: List[Estado] = Nil
 
   //add item
+  def add_Item(itemId:Int, trId:Int, estado:Estado) = {
+    this.itemID = add_lista(this.itemID, itemId)
+    this.TrIds  = add_lista(this.TrIds, trId)
+    this.Status = add_lista(this.Status, estado)
+  }
+  //atualizar item
+  def att_Item(trId:Int, newEstado:Estado) = {
+    val k = getListaPos(this.TrIds, trId)
+    if(k != -1){
+      this.Status = changeListaPos(this.Status, newEstado, k)
+    }
+  }
   //print TrMananger
   def printEstadoA():String = {
     var s = ""
     s = s + "Tr Manager:\n"
-    s = s +"itemID: " + compos_lista(this.itemID)
-    s = s +"TrId: " + compos_lista(this.TrIds)
-    s = s +"Status: " + compos_lista(this.Status)
+    s = s +"itemID: " + compos_lista(this.itemID) + "\n"
+    s = s +"TrId: " + compos_lista(this.TrIds) + "\n"
+    s = s +"Status: " + compos_lista(this.Status) + "\n"
     s
   }
 }
 
 class LockTable(nv_isol:NivelIsol) extends locksMan {
+  //isolamento
   val isolamento:NivelIsol = nv_isol
   // idItem
   var idItems: List[String] = Nil
@@ -146,73 +235,28 @@ class LockTable(nv_isol:NivelIsol) extends locksMan {
   var duracoes: List[Duracao] = Nil
   //tipo
   var tipos: List[TipoBlock] = Nil
-
+  //estado do bloqueio
+  var ativo: List[Boolean] = Nil
+  //retorna o estado da lista de bloqueio como string
   def printEstadoA():String = {
     var s = ""
     s = s + "LOCKTABLE:\n"
-    s = s +"IdItem: " + compos_lista(this.idItems)
-    s = s +"TrId: " + compos_lista(this.TrIds)
-    s = s +"Escopo: " + compos_lista(this.escopos)
-    s = s +"Duracao: " + compos_lista(this.duracoes)
-    s = s +"Tipo: " + compos_lista(this.tipos)
+    s = s +"IdItem: " + compos_lista(this.idItems) + "\n"
+    s = s +"TrId: " + compos_lista(this.TrIds) + "\n"
+    s = s +"Escopo: " + compos_lista(this.escopos) + "\n"
+    s = s +"Duracao: " + compos_lista(this.duracoes) + "\n"
+    s = s +"Tipo: " + compos_lista(this.tipos) + "\n"
+    s = s +"Ativo: " + compos_lista(this.ativo) + "\n"
     s
   }
   //tenta adicionar bloqueios de leitura na tabela
   def RL(Tr: Int, D: String): Boolean = {
     //verifica se tem isolamento incompativel na tabela tipos e retorna true se tiver
-    def verificaIncomp(idItem:List[String], tipo:List[TipoBlock]): Boolean = {
-      idItem match
-        case head :: next => tipo match
-                              case cab :: prox => if(head.equalsIgnoreCase(D) && cab == TipoBlock.ESCRITA){
-                                return true
-                              }else{
-                                verificaIncomp(next, prox)
-                              }
-                              case Nil => false
-        case Nil => false
-      
-    }
-    val validar = verificaIncomp(this.idItems, this.tipos)
-    
-    if(validar == true){ //se tiver -> retorna false (nao consegiu inserir bloqueio)
-      false 
-    }else{ //nao tiver -> adiciona o bloqueio
-    //adicionar bloqueio
-      //verifica o nivel de isolamento
-      this.isolamento match
-        case NivelIsol.READ_UNCOMMIT => true//nao adiciona bloqueio
-
-        case NivelIsol.READ_COMMIT =>  this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.CURTA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.LEITURA)
-                                       //adiciona bloqueio com duracao curta 
-
-        case NivelIsol.READ_REPEAT =>  this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.LEITURA)
-                                       //longa duracao/objeto
-
-        case NivelIsol.SERIALIZE =>    this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.LEITURA)
-                                       //longa duracao
-      //retorna true
-      true
-    }
-  }
-  def WL(Tr: Int, D: String): Boolean = {
-     //verifica se tem isolamento incompativel na tabela tipos e retorna true se tiver
     def verificaIncomp(idItem:List[String],trId:List[Int], tipo:List[TipoBlock]): Boolean = {
       idItem match
         case idItemH :: idItemN => trId match
           case trIdH :: trIdN => tipo match
-             case tipoH :: tipoN => if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.LEITURA && trIdH != Tr){
+             case tipoH :: tipoN => if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.LEITURA && trIdH == Tr){
                                       return true
                                     }else if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.ESCRITA && trIdH != Tr){
                                       return true
@@ -230,12 +274,70 @@ class LockTable(nv_isol:NivelIsol) extends locksMan {
     }else{ //nao tiver -> adiciona o bloqueio
     //adicionar bloqueio
       //verifica o nivel de isolamento
+      this.isolamento match
+        case NivelIsol.READ_UNCOMMIT => true //nao adiciona bloqueio
+
+        case NivelIsol.READ_COMMIT =>  this.idItems = add_lista[String](this.idItems, D)
+                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
+                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.CURTA)
+                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.LEITURA)
+                                       this.ativo    = add_lista(this.ativo, true)
+                                       //adiciona bloqueio com duracao curta 
+
+        case NivelIsol.READ_REPEAT =>  this.idItems = add_lista[String](this.idItems, D)
+                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
+                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
+                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.LEITURA)
+                                       this.ativo    = add_lista(this.ativo, true)
+                                       //longa duracao/objeto
+
+        case NivelIsol.SERIALIZE =>    this.idItems = add_lista[String](this.idItems, D)
+                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
+                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
+                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.LEITURA)
+                                       this.ativo    = add_lista(this.ativo, true)
+                                       //longa duracao
+      //retorna true
+      true
+    }
+  }
+  def WL(Tr: Int, D: String): Boolean = {
+     //verifica se tem isolamento incompativel na tabela tipos e retorna true se tiver
+    def verificaIncomp(idItem:List[String],trId:List[Int], tipo:List[TipoBlock], active:List[Boolean]): Boolean = {
+      active match
+        case activeH :: activeN => idItem match
+          case idItemH :: idItemN => trId match
+            case trIdH :: trIdN => tipo match
+              case tipoH :: tipoN => if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.LEITURA && trIdH != Tr && activeH == true){
+                                        return true
+                                      }else if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.ESCRITA && trIdH != Tr && activeH == true){
+                                        return true
+                                      }else if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.ESCRITA && trIdH == Tr && activeH == false){
+                                        return true
+                                      }else{
+                                        verificaIncomp(idItemN, trIdN, tipoN, activeN)
+                                      }
+              case Nil => false
+            case Nil => false
+          case Nil => false
+        case Nil => false
+    }
+    val validar = verificaIncomp(this.idItems, this.TrIds, this.tipos, this.ativo)
+    if(validar == true){ //se tiver -> retorna false (nao consegiu inserir bloqueio)
+      false 
+    }else{ //nao tiver -> adiciona o bloqueio
+    //adicionar bloqueio
+      //verifica o nivel de isolamento
         this.isolamento match
         case NivelIsol.READ_UNCOMMIT =>this.idItems = add_lista[String](this.idItems, D)
                                        this.TrIds = add_lista[Int](this.TrIds, Tr)
                                        this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
                                        this.duracoes = add_lista[Duracao](this.duracoes, Duracao.CURTA)
                                        this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.ESCRITA)
+                                       this.ativo    = add_lista(this.ativo, true)
                                        //adiciona bloqueio com duracao curta 
 
         case NivelIsol.READ_COMMIT =>  this.idItems = add_lista[String](this.idItems, D)
@@ -243,6 +345,7 @@ class LockTable(nv_isol:NivelIsol) extends locksMan {
                                        this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
                                        this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
                                        this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.ESCRITA)
+                                       this.ativo    = add_lista(this.ativo, true)
                                        //adiciona bloqueio com duracao curta 
 
         case NivelIsol.READ_REPEAT =>  this.idItems = add_lista[String](this.idItems, D)
@@ -250,6 +353,7 @@ class LockTable(nv_isol:NivelIsol) extends locksMan {
                                        this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
                                        this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
                                        this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.ESCRITA)
+                                       this.ativo    = add_lista(this.ativo, true)
                                        //longa duracao/objeto
 
         case NivelIsol.SERIALIZE =>    this.idItems = add_lista[String](this.idItems, D)
@@ -257,12 +361,12 @@ class LockTable(nv_isol:NivelIsol) extends locksMan {
                                        this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
                                        this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
                                        this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.ESCRITA)
+                                       this.ativo    = add_lista(this.ativo, true)
                                        //longa duracao
       //retorna true
         true
     }
   }
-
   def UL(Tr: Int, D: String): Unit = {
       //acha o indice
       def findIndice(trId:List[Int], idItem:List[String]):Int = {
@@ -278,21 +382,36 @@ class LockTable(nv_isol:NivelIsol) extends locksMan {
       }
       var k = findIndice(this.TrIds, this.idItems)
       if(k != -1){
-        this.idItems  = remove_listaPos(this.idItems, k)
-        this.TrIds    = remove_listaPos(this.TrIds, k)
-        this.escopos  = remove_listaPos(this.escopos, k)
-        this.duracoes = remove_listaPos(this.duracoes, k)
-        this.tipos    = remove_listaPos(this.tipos, k)
+        this.ativo = changeListaPos(this.ativo, false, k)
       }
   }
 }
 
 //salva o estado de um momento especifico do escalonador
-class Momento(grafo:String, tabelaBloq:String, mananger:String){
+class Momento(operacaoAtual:String ,grafo:Wait_For, tabelaBloq:LockTable, mananger:TrManager, waitItem:Wait_Item){
+  //operacao atual
+  val opAtual = operacaoAtual
   //grafo
+  val grafoStr = grafo.draw_grafo() 
   //lockTable
+  val lockStr  = tabelaBloq.printEstadoA()
   //trMananger
+  val trmStr   = mananger.printEstadoA()
   //lista de espera
+  val waitStr  = waitItem.printEstadoAtual()
+
+  def printMomento() ={
+    println("Operacao Atual: " + opAtual)
+    println("-")
+    println(grafoStr)
+    println("-")
+    println(lockStr)
+    println("-")
+    println(trmStr)
+    println("-")
+    println(waitStr)
+    println("-")
+  }
 }
 
 //funcoes auxliares
@@ -436,21 +555,55 @@ def mostraLista(l: List[String]): Unit = {
 
 }
 
+class Escalonador(scheduler:list[String]){
+  var lastadd = 1
+  //grafo
+  var grafo_W = 0
+  //lista de espera
+  var lista_espera = 0
+  //locktable
+  var lockTable = 0
+  //trMananger
+  var trMananger = 0
+  ////////////////
+  //list[string] scheduler
+  var schedulerSerial = ""
+  //list[momentos]
+  var momentos = 0
+  /////////////////
+  def mostrarMomento(momentos:List[Momento], indiceF:Int, indiceI:Int = 0) = {}
+  //processar(Item:string)
+  def processarItem(Item:string) = {}
+  //escalonarScheduler(lista[string])
+  def escalonarScheduler(scheduler:list[String]) = {}
+}
+
 object Main extends App {
   
-  var teste = "BT(1)r1(x)BT(2)w2(x)r2(y)r1(y)C(1)r2(z)C(2)"
-  var ttt = readString(teste)
-  mostraLista(ttt)
+  var t = new Wait_Item
+  t.add_wait("x", 1)
+  t.add_wait("x", 3)
+  t.add_wait("x", 5)
+  t.add_wait("y", 1)
+  t.add_wait("z", 3)
+  t.add_wait("x", 15)
+  println(t.printEstadoAtual())
+  t.remove_wait("y")
+  println(t.printEstadoAtual())
+  //var teste = "BT(1)r1(x)BT(2)w2(x)r2(y)r1(y)C(1)r2(z)C(2)"
+  //var ttt = readString(teste)
+  //mostraLista(ttt)
   
-  val lock:LockTable = new LockTable(NivelIsol.READ_COMMIT)
-  lock.RL(1, "x")
-  lock.WL(1, "y")
-  var k = lock.printEstadoA()
-  println(k)
-  lock.UL(1, "y")
+  //val lock:LockTable = new LockTable(NivelIsol.READ_COMMIT)
+  //lock.RL(1, "x")
+  //lock.WL(1, "y")
+  //var k = lock.printEstadoA()
+  //println(k)
+  //lock.UL(1, "x")
+  //lock.RL(1, "x")
   //println(k.toString())
-  k = lock.printEstadoA()
-  println(k)
+  //k = lock.printEstadoA()
+  //println(k)
   //println(j)
   /*
   val k = sizeLista(ttt)

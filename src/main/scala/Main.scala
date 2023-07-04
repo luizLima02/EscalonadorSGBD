@@ -1,4 +1,5 @@
 import scala.compiletime.ops.any
+import scala.io.StdIn.readLine
 import scala.compiletime.ops.string
 import scala.collection.immutable.Range.Int
 
@@ -21,7 +22,7 @@ enum NivelIsol:
 //tipos auxiliares
 case class NumPos(num: String, pos: Int)
 //wait item
-case class ItemWait(var waiting:List[Int])
+case class ItemWait(var waiting: List[Int])
 
 //traits
 trait locksMan {
@@ -35,75 +36,87 @@ trait locksMan {
   def UL(Tr: Int, D: String): Unit
 }
 //funcao auxiliar/ adicionar lista
-def add_lista[A](lista:List[A], valor:A): List[A] = {
+def add_lista[A](lista: List[A], valor: A): List[A] = {
   lista match
-    case head :: next => head::(add_lista[A](next, valor))
-    case Nil => valor::Nil
+    case head :: next => head :: (add_lista[A](next, valor))
+    case Nil          => valor :: Nil
 }
-def contem[A](lista:List[A], valor:A): Boolean = {
+def contem[A](lista: List[A], valor: A): Boolean = {
   lista match
-    case head :: next => if(head.toString().equalsIgnoreCase(valor.toString()) == false){(contem[A](next, valor))}else{true}
+    case head :: next =>
+      if (head.toString().equalsIgnoreCase(valor.toString()) == false) {
+        (contem[A](next, valor))
+      } else { true }
     case Nil => false
 }
 //funcao auxiliar/ remover lista passando valor
-def remove_lista[A](lista:List[A], valor:A): List[A] = {
+def remove_lista[A](lista: List[A], valor: A): List[A] = {
   lista match
-    case head :: next => if((valor.toString()).equalsIgnoreCase(head.toString())){
-                          next
-                        }else{
-                          head::remove_lista(next, valor)
-                        }
+    case head :: next =>
+      if ((valor.toString()).equalsIgnoreCase(head.toString())) {
+        next
+      } else {
+        head :: remove_lista(next, valor)
+      }
     case Nil => Nil
 }
 //funcao auxiliar/ remover lista passando indice
-def remove_listaPos[A](lista:List[A], posF:Int ,posI:Int = 0): List[A] = {
-  if(posF > posI){
+def remove_listaPos[A](lista: List[A], posF: Int, posI: Int = 0): List[A] = {
+  if (posF > posI) {
     lista match
-      case head :: next => head::remove_listaPos(next, posF, posI + 1)
-      case Nil => Nil
-  }else{
+      case head :: next => head :: remove_listaPos(next, posF, posI + 1)
+      case Nil          => Nil
+  } else {
     lista match
       case head :: next => next
-      case Nil => Nil    
+      case Nil          => Nil
   }
 }
 //funcao auxiliar lista para linha separada por / e com uma quebra de linha no final
-def compos_lista[A](lista:List[A], divisor:String = " / " ):String = {
+def compos_lista[A](lista: List[A], divisor: String = " / "): String = {
   lista match
-    case head :: next => head.toString() + divisor + compos_lista[A](next, divisor)
+    case head :: next =>
+      head.toString() + divisor + compos_lista[A](next, divisor)
     case Nil => ""
 }
 //funcao auxiliar lista pega a posicao do valor passado ou valor negativo se nao tiver
-def getListaPos[A](lista:List[A], valor:A):Int = {
+def getListaPos[A](lista: List[A], valor: A): Int = {
   lista match
-    case head :: next => if(head == valor){
-      0
-    }else{
-      if(getListaPos(next, valor) == -1){-1}else{1 + getListaPos(next, valor)}
-    }
+    case head :: next =>
+      if (head == valor) {
+        0
+      } else {
+        if (getListaPos(next, valor) == -1) { -1 }
+        else { 1 + getListaPos(next, valor) }
+      }
     case Nil => -1
 }
-def getListaPosValue[A](lista:List[A], posF:Int ,posI:Int = 0):A = {
-  if(posF > posI){
+def getListaPosValue[A](lista: List[A], posF: Int, posI: Int = 0): A = {
+  if (posF > posI) {
     lista match
       case head :: next => getListaPosValue(next, posF, posI + 1)
-      case Nil => lista.last
-  }else{
+      case Nil          => lista.last
+  } else {
     lista match
       case head :: next => head
-      case Nil => lista.last
+      case Nil          => lista.last
   }
 }
 //muda a posicao especificada da lista se ela nao estiver vazia
-def changeListaPos[A](lista:List[A], valor:A, posF:Int ,posI:Int = 0):List[A] = {
-  if(posF > posI){
+def changeListaPos[A](
+    lista: List[A],
+    valor: A,
+    posF: Int,
+    posI: Int = 0
+): List[A] = {
+  if (posF > posI) {
     lista match
-      case head :: next => head::changeListaPos(next,valor, posF, posI + 1)
-      case Nil => Nil
-  }else{
+      case head :: next => head :: changeListaPos(next, valor, posF, posI + 1)
+      case Nil          => Nil
+  } else {
     lista match
-      case head :: next => valor::next
-      case Nil => Nil    
+      case head :: next => valor :: next
+      case Nil          => Nil
   }
 }
 
@@ -123,20 +136,38 @@ class Wait_For(size: Int) {
   }
 
   def add_Aresta(tr1: Int, tr2: Int) = {
-      this.data(tr1-1)(tr2-1) = 1
+    this.data(tr1 - 1)(tr2 - 1) = 1
   }
 
   def remove_Aresta(tr1: Int, tr2: Int) = {
-      this.data(tr1-1)(tr2-1) = 0
+    this.data(tr1 - 1)(tr2 - 1) = 0
+  }
+
+  def delete_Ltr(tr1: Int) = {
+    if((tr1-1) >= 0){
+      for (i <- 0 until size) do {
+          this.remove_Aresta(tr1, i+1)
+     }
+    }
+  }
+
+  def delete_tr(tr1: Int) = {
+    for (i <- 0 until size) do {
+      for (j <- 0 until size) do {
+        if (i == tr1 || j == tr1) {
+          data(i)(j) = 0
+        }
+      }
+    }
   }
 
   def draw_grafo(): String = {
     var graf: String = "Grafo:\n"
     for (i <- 0 until size) do {
-      graf = graf + "T" + (i+1).toString() + ": "
+      graf = graf + "T" + (i + 1).toString() + ": "
       for (j <- 0 until size) do {
         if (data(i)(j) == 1) {
-          graf = graf + "T"+(j+1).toString() + " "
+          graf = graf + "T" + (j + 1).toString() + " "
         }
       }
       graf = graf + "\n"
@@ -146,55 +177,79 @@ class Wait_For(size: Int) {
 }
 
 //wait item
-class Wait_Item{
-  var items:List[String] = Nil
-  var waiting:List[ItemWait] = Nil
-  //adiciona um item e um tr que o espera
+class Wait_Item {
+  var items: List[String] = Nil
+  var waiting: List[ItemWait] = Nil
+  // adiciona um item e um tr que o espera
 
-  def add_wait(item:String, tr:Int) = {
+  def add_wait(item: String, tr: Int) = {
     val k = getListaPos(this.items, item)
-    if(k == -1){
+    if (k == -1) {
       this.items = add_lista(this.items, item)
-      this.waiting  = add_lista(this.waiting, ItemWait(tr::Nil))
-    }else{
+      this.waiting = add_lista(this.waiting, ItemWait(tr :: Nil))
+    } else {
       var valor = getListaPosValue(this.waiting, k)
-      if(contem(valor.waiting, tr) == false){
+      if (contem(valor.waiting, tr) == false) {
         valor.waiting match
-        case h::n => valor.waiting = add_lista(valor.waiting, tr)
-        case Nil  => 
+          case h :: n => valor.waiting = add_lista(valor.waiting, tr)
+          case Nil    =>
         this.waiting = changeListaPos(this.waiting, valor, k)
       }
     }
   }
-  def remove_wait(item:String):Int = {
+  def remove_wait(item: String): Int = {
     val k = getListaPos(this.items, item)
-    if(k == -1){
+    if (k == -1) {
       -1
-    }else{
+    } else {
       var valor = getListaPosValue(this.waiting, k)
       var remov = valor.waiting(0)
       valor.waiting match
-        case h::n => valor.waiting = remove_listaPos(valor.waiting, 0)
-        case Nil  => 
+        case h :: n => valor.waiting = remove_listaPos(valor.waiting, 0)
+        case Nil    =>
       valor.waiting match
-        case h::n => this.waiting = changeListaPos(this.waiting, valor, k)
-        case Nil  => this.items = remove_listaPos(this.items, k)
-                     this.waiting = remove_listaPos(this.waiting, k)
-       remov
+        case h :: n => this.waiting = changeListaPos(this.waiting, valor, k)
+        case Nil =>
+          this.items = remove_listaPos(this.items, k)
+          this.waiting = remove_listaPos(this.waiting, k)
+      remov
     }
   }
 
-  def printEstadoAtual():String = {
-     var s = "Wait Item:\n"
-     def percorrerLista(item:List[String], waiting:List[ItemWait]):String = {
+  def remove_waiter(item: String, tr: Int) = {
+    val k = getListaPos(this.items, item)
+    if (k == -1) {} else {
+      var valor = getListaPosValue(this.waiting, k)
+      valor.waiting match
+        case h :: n =>
+          val posicao = getListaPos(valor.waiting, tr)
+          if (posicao == -1) {} else {
+            valor.waiting = remove_listaPos(valor.waiting, posicao)
+          } // valor.waiting = remove_listaPos(valor.waiting, 0)
+        case Nil =>
+      valor.waiting match
+        case h :: n => this.waiting = changeListaPos(this.waiting, valor, k)
+        case Nil =>
+          this.items = remove_listaPos(this.items, k)
+          this.waiting = remove_listaPos(this.waiting, k)
+    }
+  }
+  def printEstadoAtual(): String = {
+    var s = "Wait Item:\n"
+    def percorrerLista(item: List[String], waiting: List[ItemWait]): String = {
       item match
-        case itemH :: itemN => waiting match
-                    case waitingH :: waitingN =>  itemH + ", [ " + compos_lista(waitingH.waiting, ", ") + " ]\n" + percorrerLista(itemN, waitingN)
-                    case Nil => ""
+        case itemH :: itemN =>
+          waiting match
+            case waitingH :: waitingN =>
+              itemH + ", [ " + compos_lista(
+                waitingH.waiting,
+                ", "
+              ) + " ]\n" + percorrerLista(itemN, waitingN)
+            case Nil => ""
         case Nil => ""
-     } 
-     s = s + percorrerLista(this.items, this.waiting)
-     s
+    }
+    s = s + percorrerLista(this.items, this.waiting)
+    s
   }
 }
 //trManager
@@ -206,33 +261,40 @@ class TrManager {
 //status
   var Status: List[Estado] = Nil
 
-  //add item
-  def add_Item(itemId:Int, trId:Int, estado:Estado) = {
+  // add item
+  def add_Item(itemId: Int, trId: Int, estado: Estado) = {
     this.itemID = add_lista(this.itemID, itemId)
-    this.TrIds  = add_lista(this.TrIds, trId)
+    this.TrIds = add_lista(this.TrIds, trId)
     this.Status = add_lista(this.Status, estado)
   }
-  //atualizar item
-  def att_Item(trId:Int, newEstado:Estado) = {
+  // atualizar item
+  def att_Item(trId: Int, newEstado: Estado) = {
     val k = getListaPos(this.TrIds, trId)
-    if(k != -1){
+    if (k != -1) {
       this.Status = changeListaPos(this.Status, newEstado, k)
     }
   }
-  //print TrMananger
-  def printEstadoA():String = {
+  def ativar() = {
+    for (k <- 0 until this.Status.length) {
+      if (this.Status(k) == Estado.ABORTADA) {
+        this.Status = changeListaPos(this.Status, Estado.ATIVA, k)
+      }
+    }
+  }
+  // print TrMananger
+  def printEstadoA(): String = {
     var s = ""
     s = s + "Tr Manager:\n"
-    s = s +"itemID: " + compos_lista(this.itemID) + "\n"
-    s = s +"TrId: " + compos_lista(this.TrIds) + "\n"
-    s = s +"Status: " + compos_lista(this.Status) + "\n"
+    s = s + "itemID: " + compos_lista(this.itemID) + "\n"
+    s = s + "TrId: " + compos_lista(this.TrIds) + "\n"
+    s = s + "Status: " + compos_lista(this.Status) + "\n"
     s
   }
 }
 
-class LockTable(nv_isol:NivelIsol) extends locksMan {
-  //isolamento
-  val isolamento:NivelIsol = nv_isol
+class LockTable(nv_isol: NivelIsol) extends locksMan {
+  // isolamento
+  val isolamento: NivelIsol = nv_isol
   // idItem
   var idItems: List[String] = Nil
   // TrId
@@ -241,182 +303,245 @@ class LockTable(nv_isol:NivelIsol) extends locksMan {
   var escopos: List[Escopo] = Nil
   // duracao
   var duracoes: List[Duracao] = Nil
-  //tipo
+  // tipo
   var tipos: List[TipoBlock] = Nil
-  //estado do bloqueio
+  // estado do bloqueio
   var ativo: List[Boolean] = Nil
-  //retorna o estado da lista de bloqueio como string
-  def printEstadoA():String = {
+  // retorna o estado da lista de bloqueio como string
+  def printEstadoA(): String = {
     var s = ""
     s = s + "LOCKTABLE:\n"
-    s = s +"IdItem: " + compos_lista(this.idItems) + "\n"
-    s = s +"TrId: " + compos_lista(this.TrIds) + "\n"
-    s = s +"Escopo: " + compos_lista(this.escopos) + "\n"
-    s = s +"Duracao: " + compos_lista(this.duracoes) + "\n"
-    s = s +"Tipo: " + compos_lista(this.tipos) + "\n"
-    s = s +"Ativo: " + compos_lista(this.ativo) + "\n"
+    s = s + "IdItem: " + compos_lista(this.idItems) + "\n"
+    s = s + "TrId: " + compos_lista(this.TrIds) + "\n"
+    s = s + "Escopo: " + compos_lista(this.escopos) + "\n"
+    s = s + "Duracao: " + compos_lista(this.duracoes) + "\n"
+    s = s + "Tipo: " + compos_lista(this.tipos) + "\n"
+    s = s + "Ativo: " + compos_lista(this.ativo) + "\n"
     s
   }
-  //tenta adicionar bloqueios de leitura na tabela
+  // tenta adicionar bloqueios de leitura na tabela
   def RL(Tr: Int, D: String): Int = {
-    //verifica se tem isolamento incompativel na tabela tipos e retorna true se tiver
-    def verificaIncomp(idItem:List[String],trId:List[Int], tipo:List[TipoBlock]): Int = {
-      idItem match
-        case idItemH :: idItemN => trId match
-          case trIdH :: trIdN => tipo match
-             case tipoH :: tipoN => if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.LEITURA && trIdH == Tr){
-                                      return 5
-                                    }else if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.ESCRITA && trIdH != Tr){
-                                      return -trIdH
-                                    }else{
-                                      verificaIncomp(idItemN, trIdN, tipoN)
-                                    }
-             case Nil => 0
-          case Nil => 0
+    // verifica se tem isolamento incompativel na tabela tipos e retorna true se tiver
+    // println(Tr)
+    def verificaIncomp(
+        idItem: List[String],
+        trId: List[Int],
+        tipo: List[TipoBlock],
+        active: List[Boolean]
+    ): Int = {
+      active match
+        case activeH :: activeN =>
+          idItem match
+            case idItemH :: idItemN =>
+              trId match
+                case trIdH :: trIdN =>
+                  tipo match
+                    case tipoH :: tipoN =>
+                      if (
+                        idItemH.equalsIgnoreCase(
+                          D
+                        ) && tipoH == TipoBlock.ESCRITA && trIdH != Tr && activeH == true
+                      ) {
+                        -trIdH
+                      } else if (
+                        idItemH.equalsIgnoreCase(
+                          D
+                        ) && tipoH == TipoBlock.LEITURA && trIdH == Tr && activeH == false
+                      ) {
+                        5
+                      } else {
+                        verificaIncomp(idItemN, trIdN, tipoN, activeN)
+                      }
+                    case Nil => 0
+                case Nil => 0
+            case Nil => 0
         case Nil => 0
-      
     }
-    val validar = verificaIncomp(this.idItems, this.TrIds, this.tipos)
-    if(validar != 0){ //se tiver -> retorna false (nao consegiu inserir bloqueio)
-      validar
-    }else{ //nao tiver -> adiciona o bloqueio
-    //adicionar bloqueio
-      //verifica o nivel de isolamento
-      this.isolamento match
-        case NivelIsol.READ_UNCOMMIT => //nao adiciona bloqueio
-
-        case NivelIsol.READ_COMMIT =>  this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.CURTA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.LEITURA)
-                                       this.ativo    = add_lista(this.ativo, true)
-                                       //adiciona bloqueio com duracao curta 
-
-        case NivelIsol.READ_REPEAT =>  this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.LEITURA)
-                                       this.ativo    = add_lista(this.ativo, true)
-                                       //longa duracao/objeto
-
-        case NivelIsol.SERIALIZE =>    this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.LEITURA)
-                                       this.ativo    = add_lista(this.ativo, true)
-                                       //longa duracao
-      //retorna true
+    val validar =
+      verificaIncomp(this.idItems, this.TrIds, this.tipos, this.ativo)
+    // println(validar)
+    if (validar == 5) {
       1
+    } else if (validar == 0) { // nao tiver -> adiciona o bloqueio
+      // adicionar bloqueio
+      // verifica o nivel de isolamento
+      this.isolamento match
+        case NivelIsol.READ_UNCOMMIT => // nao adiciona bloqueio
+        case NivelIsol.READ_COMMIT =>
+          this.idItems = add_lista[String](this.idItems, D)
+          this.TrIds = add_lista[Int](this.TrIds, Tr)
+          this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+          this.duracoes = add_lista[Duracao](this.duracoes, Duracao.CURTA)
+          this.tipos = add_lista[TipoBlock](this.tipos, TipoBlock.LEITURA)
+          this.ativo = add_lista(this.ativo, true)
+        // adiciona bloqueio com duracao curta
+
+        case NivelIsol.READ_REPEAT =>
+          this.idItems = add_lista[String](this.idItems, D)
+          this.TrIds = add_lista[Int](this.TrIds, Tr)
+          this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+          this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
+          this.tipos = add_lista[TipoBlock](this.tipos, TipoBlock.LEITURA)
+          this.ativo = add_lista(this.ativo, true)
+        // longa duracao/objeto
+
+        case NivelIsol.SERIALIZE =>
+          this.idItems = add_lista[String](this.idItems, D)
+          this.TrIds = add_lista[Int](this.TrIds, Tr)
+          this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+          this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
+          this.tipos = add_lista[TipoBlock](this.tipos, TipoBlock.LEITURA)
+          this.ativo = add_lista(this.ativo, true)
+        // longa duracao
+      // retorna true
+      1
+    } else {
+      validar
     }
   }
   def WL(Tr: Int, D: String): Int = {
-     //verifica se tem isolamento incompativel na tabela tipos e retorna true se tiver
-    def verificaIncomp(idItem:List[String],trId:List[Int], tipo:List[TipoBlock], active:List[Boolean]): Int = {
+    // verifica se tem isolamento incompativel na tabela tipos e retorna true se tiver
+    def verificaIncomp(
+        idItem: List[String],
+        trId: List[Int],
+        tipo: List[TipoBlock],
+        active: List[Boolean]
+    ): Int = {
       active match
-        case activeH :: activeN => idItem match
-          case idItemH :: idItemN => trId match
-            case trIdH :: trIdN => tipo match
-              case tipoH :: tipoN => if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.LEITURA && trIdH != Tr && activeH == true){
-                                        return -trIdH
-                                      }else if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.ESCRITA && trIdH != Tr && activeH == true){
-                                        return -trIdH
-                                      }else if(idItemH.equalsIgnoreCase(D) && tipoH == TipoBlock.ESCRITA && trIdH == Tr && activeH == false){
-                                        return 5
-                                      }else{
-                                        verificaIncomp(idItemN, trIdN, tipoN, activeN)
-                                      }
-              case Nil => 0
+        case activeH :: activeN =>
+          idItem match
+            case idItemH :: idItemN =>
+              trId match
+                case trIdH :: trIdN =>
+                  tipo match
+                    case tipoH :: tipoN =>
+                      if (
+                        idItemH.equalsIgnoreCase(
+                          D
+                        ) && tipoH == TipoBlock.LEITURA && trIdH != Tr && activeH == true
+                      ) {
+                        -trIdH
+                      } else if (
+                        idItemH.equalsIgnoreCase(
+                          D
+                        ) && tipoH == TipoBlock.ESCRITA && trIdH != Tr && activeH == true
+                      ) {
+                        -trIdH
+                      } else if (
+                        idItemH.equalsIgnoreCase(
+                          D
+                        ) && tipoH == TipoBlock.ESCRITA && trIdH == Tr && activeH == false
+                      ) {
+                        5
+                      } else {
+                        verificaIncomp(idItemN, trIdN, tipoN, activeN)
+                      }
+                    case Nil => 0
+                case Nil => 0
             case Nil => 0
-          case Nil => 0
         case Nil => 0
     }
-    val validar = verificaIncomp(this.idItems, this.TrIds, this.tipos, this.ativo)
-    if(validar != 0){ //se tiver -> retorna false (nao consegiu inserir bloqueio)
-      validar 
-    }else{ //nao tiver -> adiciona o bloqueio
-    //adicionar bloqueio
-      //verifica o nivel de isolamento
-        this.isolamento match
-        case NivelIsol.READ_UNCOMMIT =>this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.CURTA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.ESCRITA)
-                                       this.ativo    = add_lista(this.ativo, true)
-                                       //adiciona bloqueio com duracao curta 
+    val validar =
+      verificaIncomp(this.idItems, this.TrIds, this.tipos, this.ativo)
+    // println(validar)
+    if (validar == 5) {
+      1
+    } else if (validar == 0) { // nao tiver -> adiciona o bloqueio
+      // adicionar bloqueio
+      // verifica o nivel de isolamento
+      this.isolamento match
+        case NivelIsol.READ_UNCOMMIT =>
+          this.idItems = add_lista[String](this.idItems, D)
+          this.TrIds = add_lista[Int](this.TrIds, Tr)
+          this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+          this.duracoes = add_lista[Duracao](this.duracoes, Duracao.CURTA)
+          this.tipos = add_lista[TipoBlock](this.tipos, TipoBlock.ESCRITA)
+          this.ativo = add_lista(this.ativo, true)
+        // adiciona bloqueio com duracao curta
 
-        case NivelIsol.READ_COMMIT =>  this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.ESCRITA)
-                                       this.ativo    = add_lista(this.ativo, true)
-                                       //adiciona bloqueio com duracao curta 
+        case NivelIsol.READ_COMMIT =>
+          this.idItems = add_lista[String](this.idItems, D)
+          this.TrIds = add_lista[Int](this.TrIds, Tr)
+          this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+          this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
+          this.tipos = add_lista[TipoBlock](this.tipos, TipoBlock.ESCRITA)
+          this.ativo = add_lista(this.ativo, true)
+        // adiciona bloqueio com duracao curta
 
-        case NivelIsol.READ_REPEAT =>  this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.ESCRITA)
-                                       this.ativo    = add_lista(this.ativo, true)
-                                       //longa duracao/objeto
+        case NivelIsol.READ_REPEAT =>
+          this.idItems = add_lista[String](this.idItems, D)
+          this.TrIds = add_lista[Int](this.TrIds, Tr)
+          this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+          this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
+          this.tipos = add_lista[TipoBlock](this.tipos, TipoBlock.ESCRITA)
+          this.ativo = add_lista(this.ativo, true)
+        // longa duracao/objeto
 
-        case NivelIsol.SERIALIZE =>    this.idItems = add_lista[String](this.idItems, D)
-                                       this.TrIds = add_lista[Int](this.TrIds, Tr)
-                                       this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
-                                       this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
-                                       this.tipos    = add_lista[TipoBlock](this.tipos , TipoBlock.ESCRITA)
-                                       this.ativo    = add_lista(this.ativo, true)
-                                       //longa duracao
-      //retorna true
-        1
+        case NivelIsol.SERIALIZE =>
+          this.idItems = add_lista[String](this.idItems, D)
+          this.TrIds = add_lista[Int](this.TrIds, Tr)
+          this.escopos = add_lista[Escopo](this.escopos, Escopo.OBJETO)
+          this.duracoes = add_lista[Duracao](this.duracoes, Duracao.LONGA)
+          this.tipos = add_lista[TipoBlock](this.tipos, TipoBlock.ESCRITA)
+          this.ativo = add_lista(this.ativo, true)
+        // longa duracao
+      // retorna true
+      1
+    } else {
+      validar
     }
   }
   def UL(Tr: Int, D: String): Unit = {
-      //acha o indice
-      def findIndice(trId:List[Int], idItem:List[String]):Int = {
-        trId  match
-          case trIdH :: trIdN => idItem match
-            case idItemH :: idItemN =>if(trIdH == Tr && idItemH.equalsIgnoreCase(D)){
+    // acha o indice
+    def findIndice(trId: List[Int], idItem: List[String]): Int = {
+      trId match
+        case trIdH :: trIdN =>
+          idItem match
+            case idItemH :: idItemN =>
+              if (trIdH == Tr && idItemH.equalsIgnoreCase(D)) {
                 0
-            }else{
-              if(findIndice(trIdN, idItemN) == -1){-1}else{1 + findIndice(trIdN, idItemN)}
-            }
+              } else {
+                if (findIndice(trIdN, idItemN) == -1) { -1 }
+                else { 1 + findIndice(trIdN, idItemN) }
+              }
             case Nil => -1
-          case Nil => -1
-      }
-      var k = findIndice(this.TrIds, this.idItems)
-      if(k != -1){
-        this.ativo = changeListaPos(this.ativo, false, k)
-      }
+        case Nil => -1
+    }
+    var k = findIndice(this.TrIds, this.idItems)
+    if (k != -1) {
+      this.ativo = changeListaPos(this.ativo, false, k)
+    }
   }
-  def ULA(Tr: Int):Unit = {
-      for(j <- 0 until this.TrIds.length){
-        if(this.TrIds(j) == Tr && this.ativo(j) == true){
-          this.ativo = changeListaPos(this.ativo, false, j)
-          //this.ativo(j) = false
-        }
+  def ULA(Tr: Int): Unit = {
+    for (j <- 0 until this.TrIds.length) {
+      if (this.TrIds(j) == Tr && this.ativo(j) == true) {
+        this.ativo = changeListaPos(this.ativo, false, j)
+        // this.ativo(j) = false
       }
+    }
   }
 }
 
 //salva o estado de um momento especifico do escalonador
-class Momento(operacaoAtual:String ,grafo:Wait_For, tabelaBloq:LockTable, mananger:TrManager, waitItem:Wait_Item){
-  //operacao atual
+class Momento(
+    operacaoAtual: String,
+    grafo: Wait_For,
+    tabelaBloq: LockTable,
+    mananger: TrManager,
+    waitItem: Wait_Item
+) {
+  // operacao atual
   val opAtual = operacaoAtual
-  //grafo
-  val grafoStr = grafo.draw_grafo() 
-  //lockTable
-  val lockStr  = tabelaBloq.printEstadoA()
-  //trMananger
-  val trmStr   = mananger.printEstadoA()
-  //lista de espera
-  val waitStr  = waitItem.printEstadoAtual()
+  // grafo
+  val grafoStr = grafo.draw_grafo()
+  // lockTable
+  val lockStr = tabelaBloq.printEstadoA()
+  // trMananger
+  val trmStr = mananger.printEstadoA()
+  // lista de espera
+  val waitStr = waitItem.printEstadoAtual()
 
-  def printMomento() ={
+  def printMomento() = {
     println("Operacao Atual: " + opAtual)
     println("-")
     print(grafoStr)
@@ -431,10 +556,10 @@ class Momento(operacaoAtual:String ,grafo:Wait_For, tabelaBloq:LockTable, manang
 }
 
 //funcoes auxliares
-def sizeLista(lista:List[Any]):Int = {
+def sizeLista(lista: List[Any]): Int = {
   lista match
-    case head :: next => 1 + (sizeLista(next)) 
-    case Nil => 0
+    case head :: next => 1 + (sizeLista(next))
+    case Nil          => 0
 }
 
 //funcoes de formatacao de scheduler
@@ -515,7 +640,7 @@ def montarC(s: String): NumPos = {
   }
 }
 
-def achaNum(Item:String):Int = {
+def achaNum(Item: String): Int = {
   val k = Item.split("-")
   val r = k(1).toInt
   r
@@ -576,72 +701,81 @@ def mostraLista(l: List[String]): Unit = {
     case Nil => println("")
 }
 
-def transacoesQnt(scheduler:List[String]):Int = {
+def transacoesQnt(scheduler: List[String]): Int = {
   scheduler match
-    case head :: next => if(head.substring(0,1).equalsIgnoreCase("b")){1 + transacoesQnt(next)}else{transacoesQnt(next)}
+    case head :: next =>
+      if (head.substring(0, 1).equalsIgnoreCase("b")) {
+        1 + transacoesQnt(next)
+      } else { transacoesQnt(next) }
     case Nil => 0
 }
 
-def listaToArray(lista:List[String]):Array[String] = {
+def listaToArray(lista: List[String]): Array[String] = {
   var data: Array[String] = Array.ofDim[String](lista.length)
   for (i <- 0 until lista.length) do {
     data(i) = lista(i)
   }
   data
 }
-def re_ordenar(lista:Array[String], i:Int, f:Int) = {
+def re_ordenar(lista: Array[String], i: Int, f: Int) = {
   val valor = lista(f)
-  for(k <- f to (i+1) by -1){
-    lista(k) = lista(k-1) 
+  for (k <- f to (i + 1) by -1) {
+    lista(k) = lista(k - 1)
   }
   lista(i) = valor
 }
 
-class Escalonador(isolamento:NivelIsol, sch:List[String]){
+class Escalonador(isolamento: NivelIsol, sch: List[String]) {
   var scheduler = listaToArray(sch)
   var lastadd = 1
   var posAtual = 0
   var breakP = 0
-  //grafo
+  // grafo
   var grafo_W = new Wait_For(transacoesQnt(sch))
-  //lista de espera
+  // lista de espera
   var lista_espera = new Wait_Item
-  //locktable
+  // locktable
   var lockTable = new LockTable(isolamento)
-  //trMananger
+  // trMananger
   var trMananger = new TrManager
   ////////////////
-  //list[string] scheduler
+  // list[string] scheduler
   var schedulerSerial = ""
-  //list[momentos]
-  var momentos:List[Momento] = Nil
-  //abortar
-  def abortar(tr:Int) = {
-    //apaga as lockTable de tr
-    //apaga as 
-  }
-  //funcoes momento
-  def criarMomento(opAtual:String) = {
-    val m = new Momento(opAtual, this.grafo_W, this.lockTable, this.trMananger, this.lista_espera)
+  // list[momentos]
+  var momentos: List[Momento] = Nil
+  // abortar
+  // funcoes momento
+  def criarMomento(opAtual: String) = {
+    val m = new Momento(
+      opAtual,
+      this.grafo_W,
+      this.lockTable,
+      this.trMananger,
+      this.lista_espera
+    )
     this.momentos = add_lista(this.momentos, m)
   }
   /////////////////
-  def mostrarMomento(indiceF:Int, indiceI:Int = 0, momentos:List[Momento] = this.momentos):Unit = {
-    if(indiceF > indiceI){
+  def mostrarMomento(
+      indiceF: Int,
+      indiceI: Int = 0,
+      momentos: List[Momento] = this.momentos
+  ): Unit = {
+    if (indiceF > indiceI) {
       momentos match
         case head :: next => mostrarMomento(indiceF, indiceI + 1, next)
-        case Nil => ()
-    }else{
+        case Nil          => ()
+    } else {
       momentos match
         case head :: next => head.printMomento()
-        case Nil => ()    
+        case Nil          => ()
     }
   }
-  //apagar bloqueios
-  def apagarBloqueios(Tr:Int) = {
+  // apagar bloqueios
+  def apagarBloqueios(Tr: Int) = {
     val k = getListaPos(this.lockTable.TrIds, Tr)
-    if(k != -1){
-      while(k != -1){
+    if (k != -1) {
+      while (k != -1) {
         this.lockTable.TrIds = remove_listaPos(this.lockTable.TrIds, k)
         this.lockTable.idItems = remove_listaPos(this.lockTable.idItems, k)
         this.lockTable.escopos = remove_listaPos(this.lockTable.escopos, k)
@@ -651,231 +785,363 @@ class Escalonador(isolamento:NivelIsol, sch:List[String]){
       }
     }
   }
-  //processar(Item:string)
-  def processarItem(Item:String):Int = {
-   val it = Item.split("-")
-   val operacao = it(0)
-   if(operacao.equalsIgnoreCase("BT")){
-      trMananger.add_Item(it(1).toInt, this.lastadd, Estado.ATIVA)
-      this.schedulerSerial = this.schedulerSerial + s"${it(0)}(${it(1)})"
-      criarMomento(s"${it(0)}(${it(1)})")
-      this.lastadd = this.lastadd + 1
-      1
-   }else if(operacao.equalsIgnoreCase("r")){
-      //tente obter bloqueio de leitura
+  def abortar(tr: Int) = {
+    val posicao = getListaPos(this.trMananger.TrIds, tr)
+    //val trAp = getListaPosValue(this.trMananger.TrIds, posicao)
+    // apaga as lockTable de tr
+    apagarBloqueios(tr)
+    // muda o estado de tr para abortado
+    this.trMananger.att_Item(
+      getListaPosValue(this.trMananger.TrIds, posicao),
+      Estado.ABORTADA
+    )
+    // apaga as arestas de tr para qualquer outra e de qualquer outra para tr
+    this.grafo_W.delete_tr(tr)
+    // reseta a posicao atual
+    this.posAtual = 0
+  }
+  // processar(Item:string)
+  def processarItem(Item: String): Int = {
+    val it = Item.split("-")
+    val operacao = it(0)
+    if (operacao.equalsIgnoreCase("BT")) {
       val posicao = getListaPos(this.trMananger.itemID, it(1).toInt)
-      if(posicao == -1){
-        3
-      }else{
-        val status  = getListaPosValue(this.trMananger.Status, posicao)
-        status match
-          case Estado.ATIVA => val adicionado = this.lockTable.RL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
-                               if(adicionado == 1){
-                                  this.schedulerSerial = this.schedulerSerial + s"${it(0)}${it(1)}(${it(2)})"
-                                  criarMomento(s"${it(0)}${it(1)}(${it(2)})")
-                                  //liberar bloqueios de curta duracao
-                                  if(this.lockTable.isolamento == NivelIsol.READ_COMMIT){this.lockTable.UL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))}
-                                  1
-                               }else if(adicionado < 0){
-                                  if(math.abs(adicionado) > (getListaPosValue(this.trMananger.TrIds, posicao))){
-                                    adicionado
-                                  }else{
-                                    this.trMananger.att_Item(getListaPosValue(this.trMananger.TrIds, posicao), Estado.ESPERANDO)
-                                    this.lista_espera.add_wait(it(2), getListaPosValue(this.trMananger.TrIds, posicao))
-                                    grafo_W.add_Aresta(getListaPosValue(this.trMananger.TrIds, posicao), math.abs(adicionado))
-                                    criarMomento(s"${it(0)}${it(1)}(${it(2)})")
-                                    2
-                                    //acho a proxima operacao
-                                  }
-                              }else{
-                                3
-                              }
-                               //tenta obter bloqueio
-          case Estado.CONCLUÍDA => 1//faz nada
-          case Estado.ABORTADA => 1//faz nada
-          case Estado.ESPERANDO => val adicionado = this.lockTable.RL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
-                               if(adicionado == 1){
-                                  //remover item do wait item
-                                  //remover aresta do grafdo
-                                  this.schedulerSerial = this.schedulerSerial + s"${it(0)}${it(1)}(${it(2)})"
-                                  criarMomento(s"${it(0)}${it(1)}(${it(2)})")
-                                  //liberar bloqueios de curta duracao
-                                  if(this.lockTable.isolamento == NivelIsol.READ_COMMIT){this.lockTable.UL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))}
-                                  1
-                               }else if(adicionado < 0){
-                                  if(math.abs(adicionado) > (getListaPosValue(this.trMananger.TrIds, posicao))){
-                                    adicionado
-                                  }else{
-                                    this.trMananger.att_Item(getListaPosValue(this.trMananger.TrIds, posicao), Estado.ESPERANDO)
-                                    this.lista_espera.add_wait(it(2), getListaPosValue(this.trMananger.TrIds, posicao))
-                                    grafo_W.add_Aresta(getListaPosValue(this.trMananger.TrIds, posicao), math.abs(adicionado))
-                                    criarMomento(s"${it(0)}${it(1)}(${it(2)})")
-                                    2
-                                    //acho a proxima operacao
-                                  }
-                              }else{
-                                3
-                              }
+      if (posicao == -1) {
+        trMananger.add_Item(it(1).toInt, this.lastadd, Estado.ATIVA)
+        this.schedulerSerial = this.schedulerSerial + s"${it(0)}(${it(1)})"
+        criarMomento(s"${it(0)}(${it(1)})")
+        this.lastadd = this.lastadd + 1
       }
-   }else if(operacao.equalsIgnoreCase("w")){
-    //tente obter bloqueio de escrita
-    val posicao = getListaPos(this.trMananger.itemID, it(1).toInt)
-    if(posicao == -1){
+      1
+    } else if (operacao.equalsIgnoreCase("r")) {
+      // tente obter bloqueio de leitura
+      val posicao = getListaPos(this.trMananger.itemID, it(1).toInt)
+      if (posicao == -1) {
+        3
+      } else {
+        val status = getListaPosValue(this.trMananger.Status, posicao)
+        status match
+          case Estado.ATIVA =>
+            val adicionado = this.lockTable
+              .RL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
+            if (adicionado == 1) {
+              this.schedulerSerial =
+                this.schedulerSerial + s"${it(0)}${it(1)}(${it(2)})"
+              criarMomento(s"${it(0)}${it(1)}(${it(2)})")
+              // liberar bloqueios de curta duracao
+              if (this.lockTable.isolamento == NivelIsol.READ_COMMIT) {
+                this.lockTable
+                  .UL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
+              }
+              1
+            } else if (adicionado < 0) {
+              if (math.abs(adicionado) < (getListaPosValue(this.trMananger.TrIds,posicao))) {
+                //adicionado
+                val ret = getListaPosValue(this.trMananger.TrIds,posicao)
+                -ret
+              } else {
+                this.trMananger.att_Item( getListaPosValue(this.trMananger.TrIds, posicao), Estado.ESPERANDO)
+                this.lista_espera.add_wait(it(2),getListaPosValue(this.trMananger.TrIds, posicao))
+                grafo_W.add_Aresta(getListaPosValue(this.trMananger.TrIds, posicao), math.abs(adicionado))
+                criarMomento(s"${it(0)}${it(1)}(${it(2)})")
+                2
+                // acho a proxima operacao
+              }
+            } else {
+              3
+            }
+          // tenta obter bloqueio
+          case Estado.CONCLUÍDA => 1 // faz nada
+          case Estado.ABORTADA  => 1 // faz nada
+          case Estado.ESPERANDO =>
+            val adicionado = this.lockTable.RL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
+            trMananger.att_Item(getListaPosValue(this.trMananger.TrIds, posicao),Estado.ATIVA)
+            if (adicionado == 1) {
+              // remover item do wait item
+              //this.lista_espera.remove_waiter(it(2), getListaPosValue(this.trMananger.TrIds, posicao))
+              val rmt = this.lista_espera.remove_wait(it(2))
+              // remover aresta do grafo
+              this.grafo_W.delete_Ltr(rmt)
+
+              this.schedulerSerial =
+                this.schedulerSerial + s"${it(0)}${it(1)}(${it(2)})"
+              criarMomento(s"${it(0)}${it(1)}(${it(2)})")
+              // liberar bloqueios de curta duracao
+              if (this.lockTable.isolamento == NivelIsol.READ_COMMIT) {
+                this.lockTable
+                  .UL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
+              }
+              1
+            } else if (adicionado < 0) {
+              if (
+                math.abs(adicionado) < (getListaPosValue(
+                  this.trMananger.TrIds,
+                  posicao
+                ))
+              ) {
+                val ret = getListaPosValue(this.trMananger.TrIds,posicao)
+                -ret
+              } else {
+                this.trMananger.att_Item(
+                  getListaPosValue(this.trMananger.TrIds, posicao),
+                  Estado.ESPERANDO
+                )
+                /*this.lista_espera.add_wait(
+                  it(2),
+                  getListaPosValue(this.trMananger.TrIds, posicao)
+                )*/
+                grafo_W.add_Aresta(
+                  getListaPosValue(this.trMananger.TrIds, posicao),
+                  math.abs(adicionado)
+                )
+                criarMomento(s"${it(0)}${it(1)}(${it(2)})")
+                2
+                // acho a proxima operacao
+              }
+            } else {
+              3
+            }
+      }
+    } else if (operacao.equalsIgnoreCase("w")) {
+      // tente obter bloqueio de escrita
+      val posicao = getListaPos(this.trMananger.itemID, it(1).toInt)
+      if (posicao == -1) {
+        3
+      } else {
+        val status = getListaPosValue(this.trMananger.Status, posicao)
+        status match
+          case Estado.ATIVA =>
+            val adicionado = this.lockTable
+              .WL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
+            if (adicionado == 1) {
+              trMananger.att_Item(
+                getListaPosValue(this.trMananger.TrIds, posicao),
+                Estado.ATIVA
+              )
+              this.schedulerSerial =
+                this.schedulerSerial + s"${it(0)}${it(1)}(${it(2)})"
+              criarMomento(s"${it(0)}${it(1)}(${it(2)})")
+              // liberar bloqueios de curta duracao
+              if (this.lockTable.isolamento == NivelIsol.READ_UNCOMMIT) {
+                this.lockTable
+                  .UL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
+              }
+              1
+            } else if (adicionado < 0) {
+             
+              if (
+                math.abs(adicionado) < (getListaPosValue(
+                  this.trMananger.TrIds,
+                  posicao
+                ))
+              ) {
+                val ret = getListaPosValue(this.trMananger.TrIds,posicao)
+                -ret
+              } else {
+                this.trMananger.att_Item(
+                  getListaPosValue(this.trMananger.TrIds, posicao),
+                  Estado.ESPERANDO
+                )
+                this.lista_espera.add_wait(
+                  it(2),
+                  getListaPosValue(this.trMananger.TrIds, posicao)
+                )
+                grafo_W.add_Aresta(
+                  getListaPosValue(this.trMananger.TrIds, posicao),
+                  math.abs(adicionado)
+                )
+                criarMomento(s"${it(0)}${it(1)}(${it(2)})")
+                2
+                // acho a proxima operacao
+              }
+            } else {
+              3
+            }
+          // tenta obter bloqueio
+          case Estado.CONCLUÍDA => 1 // faz nada
+          case Estado.ABORTADA  => 1 // faz nada
+          case Estado.ESPERANDO =>
+            val adicionado = this.lockTable.WL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
+            trMananger.att_Item(getListaPosValue(this.trMananger.TrIds, posicao),Estado.ATIVA)
+            if (adicionado == 1) {
+              // remover item do wait item
+              //this.lista_espera.remove_waiter(it(2), getListaPosValue(this.trMananger.TrIds, posicao))
+              val rmt = this.lista_espera.remove_wait(it(2))
+              // remover aresta do grafo
+              this.grafo_W.delete_Ltr(rmt)
+              //acha a primeira transacao que tem o tipo 
+              this.schedulerSerial = this.schedulerSerial + s"${it(0)}${it(1)}(${it(2)})"
+              criarMomento(s"${it(0)}${it(1)}(${it(2)})")
+              // liberar bloqueios de curta duracao
+              if (this.lockTable.isolamento == NivelIsol.READ_UNCOMMIT) {
+                this.lockTable.UL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
+              }
+              1
+            }else if (adicionado < 0) {
+              if (math.abs(adicionado) < (getListaPosValue(this.trMananger.TrIds, posicao))
+              ) {
+                val ret = getListaPosValue(this.trMananger.TrIds,posicao)
+                -ret
+              } else {
+                this.trMananger.att_Item(
+                  getListaPosValue(this.trMananger.TrIds, posicao),
+                  Estado.ESPERANDO
+                )
+                /*this.lista_espera.add_wait(
+                  it(2),
+                  getListaPosValue(this.trMananger.TrIds, posicao)
+                )*/
+                grafo_W.add_Aresta(
+                  getListaPosValue(this.trMananger.TrIds, posicao),
+                  math.abs(adicionado)
+                )
+                criarMomento(s"${it(0)}${it(1)}(${it(2)})")
+                2
+                // acho a proxima operacao
+              }
+            } else {
+              3
+            }
+      }
+    } else if (operacao.equalsIgnoreCase("C")) {
+      val posicao = getListaPos(this.trMananger.itemID, it(1).toInt)
+      if (posicao == -1) {
+        3
+      } else {
+        val status = getListaPosValue(this.trMananger.Status, posicao)
+        
+        status match
+          case Estado.ATIVA =>
+            // remove os bloqueios de duracao longa
+            this.lockTable.ULA(getListaPosValue(this.trMananger.TrIds, posicao))
+            trMananger.att_Item(
+              getListaPosValue(this.trMananger.TrIds, posicao),
+              Estado.CONCLUÍDA
+            )
+            this.schedulerSerial = this.schedulerSerial + s"${it(0)}(${it(1)})"
+            criarMomento(s"${it(0)}(${it(1)})")
+            1
+          case Estado.CONCLUÍDA => 1 // faz nada
+          case Estado.ABORTADA  => 1 // faz nada
+          case Estado.ESPERANDO => 1 // faz nada
+      }
+    } else {
       3
-    }else{
-      val status  = getListaPosValue(this.trMananger.Status, posicao)
-        status match
-          case Estado.ATIVA => val adicionado = this.lockTable.WL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
-                               if(adicionado == 1){
-                                trMananger.att_Item(getListaPosValue(this.trMananger.TrIds, posicao), Estado.ATIVA)
-                                this.schedulerSerial = this.schedulerSerial + s"${it(0)}${it(1)}(${it(2)})"
-                                criarMomento(s"${it(0)}${it(1)}(${it(2)})")
-                                //liberar bloqueios de curta duracao
-                                if(this.lockTable.isolamento == NivelIsol.READ_UNCOMMIT){this.lockTable.UL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))}
-                                1
-                               }else if(adicionado < 0){
-                                if(math.abs(adicionado) > (getListaPosValue(this.trMananger.TrIds, posicao))){
-                                  adicionado
-                                }else{
-                                  this.trMananger.att_Item(getListaPosValue(this.trMananger.TrIds, posicao), Estado.ESPERANDO)
-                                  this.lista_espera.add_wait(it(2), getListaPosValue(this.trMananger.TrIds, posicao))
-                                  grafo_W.add_Aresta(getListaPosValue(this.trMananger.TrIds, posicao), math.abs(adicionado))
-                                  criarMomento(s"${it(0)}${it(1)}(${it(2)})")
-                                  2
-                                  //acho a proxima operacao
-                                }
-                              }else{
-                                3
-                              } 
-                               //tenta obter bloqueio
-          case Estado.CONCLUÍDA => 1//faz nada
-          case Estado.ABORTADA => 1//faz nada
-          case Estado.ESPERANDO =>val adicionado = this.lockTable.WL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))
-                               if(adicionado == 1){
-                                //remover item do wait item
-                                //remover aresta do grafdo
-                                trMananger.att_Item(getListaPosValue(this.trMananger.TrIds, posicao), Estado.ATIVA)
-                                this.schedulerSerial = this.schedulerSerial + s"${it(0)}${it(1)}(${it(2)})"
-                                criarMomento(s"${it(0)}${it(1)}(${it(2)})")
-                                //liberar bloqueios de curta duracao
-                                if(this.lockTable.isolamento == NivelIsol.READ_UNCOMMIT){this.lockTable.UL(getListaPosValue(this.trMananger.TrIds, posicao), it(2))}
-                                1
-                               }else if(adicionado < 0){
-                                if(math.abs(adicionado) > (getListaPosValue(this.trMananger.TrIds, posicao))){
-                                  adicionado
-                                }else{
-                                  this.trMananger.att_Item(getListaPosValue(this.trMananger.TrIds, posicao), Estado.ESPERANDO)
-                                  this.lista_espera.add_wait(it(2), getListaPosValue(this.trMananger.TrIds, posicao))
-                                  grafo_W.add_Aresta(getListaPosValue(this.trMananger.TrIds, posicao), math.abs(adicionado))
-                                  criarMomento(s"${it(0)}${it(1)}(${it(2)})")
-                                  2
-                                  //acho a proxima operacao
-                                }
-                              }else{
-                                3
-                              }
     }
-   }else if(operacao.equalsIgnoreCase("C")){
-      val posicao = getListaPos(this.trMananger.itemID, it(1).toInt)
-      if(posicao == -1){
-        3
-      }
-      //remove os bloqueios de duracao longa
-      this.lockTable.ULA(getListaPosValue(this.trMananger.TrIds, posicao))
-      trMananger.att_Item(getListaPosValue(this.trMananger.TrIds, posicao), Estado.CONCLUÍDA)
-      this.schedulerSerial = this.schedulerSerial + s"${it(0)}(${it(1)})"
-      criarMomento(s"${it(0)}(${it(1)})")
-      1
-   }else{
-    3
-   }
+  }
+  def concluido(lista: List[Estado]): Boolean = {
+    lista match
+      case Nil => true
+      case h :: n =>
+        if (h == Estado.CONCLUÍDA) { concluido(n) }
+        else { false }
   }
 
-  //escalonarScheduler(lista[string])
-  def escalonarScheduler():Unit = {
-    while(this.posAtual < this.scheduler.length){
-      println(this.scheduler(this.posAtual))
+  var acabou = false
+  var vezes = 0
+  // escalonarScheduler(lista[string])
+  def escalonarScheduler(): Unit = {
+    while (acabou == false) {
+      this.vezes = this.vezes + 1
+      if (this.posAtual >= this.scheduler.length) {
+        // alterar o estado de todos os schedules abortados para ativos
+        this.trMananger.ativar()
+        this.posAtual = 0
+      }
       var k = processarItem(this.scheduler(this.posAtual))
-      if(k == 1){
+      if (k == 1) {
         this.posAtual = this.posAtual + 1
-      }else if(k == 2){
-        //acha transacao diferente
+        acabou = concluido(this.trMananger.Status)
+      }
+      else if (k == 2) {
+        acabou = concluido(this.trMananger.Status)
+        // acha transacao diferente
         this.breakP = this.posAtual + 1
-        if(this.breakP == this.scheduler.length){ this.posAtual = this.scheduler.length
-        }else{
-          while(achaNum(this.scheduler(this.breakP)) == achaNum(this.scheduler(this.posAtual)) && this.breakP < this.scheduler.size){
+        if(this.breakP == this.scheduler.length) {
+          acabou = true
+        } else {
+          while (achaNum(this.scheduler(this.breakP)) == achaNum( this.scheduler(this.posAtual)) && this.breakP < this.scheduler.size
+          ) {
             this.breakP = this.breakP + 1
           }
-          //verifico se achou
-          //achou
-          if(achaNum(this.scheduler(this.breakP)) != achaNum(this.scheduler(this.posAtual))){
+          // verifico se achou
+          // achou
+          if (
+            achaNum(this.scheduler(this.breakP)) != achaNum(
+              this.scheduler(this.posAtual)
+            )
+          ) {
             re_ordenar(this.scheduler, this.posAtual, this.breakP)
-          }else{ // nao e possivel atrasar, termina escalonamento
-            this.posAtual = this.scheduler.length
+          } else { // nao e possivel atrasar, termina escalonamento
+            acabou = true
           }
         }
-      }else if(k == 3){
-        this.posAtual = this.scheduler.length
-      }else{
-        println("Abortar")
-        this.posAtual = this.scheduler.length
+      } else if (k == 3) {
+        acabou = true
+      } else {
+        val abt = achaNum(this.scheduler(this.posAtual))
+        val it = this.scheduler(this.posAtual).split("-")
+        this.schedulerSerial = this.schedulerSerial + s"A(${it(1)})"
+        abortar(-k)
+        acabou = false
         //aborta k
+      }
+      if(this.vezes >= 120){
+        acabou = true
       }
     }
   }
 }
 
 object Main extends App {
-  /*enum 
-  var t = new Wait_Item
-  t.add_wait("x", 1)
-  t.add_wait("x", 3)
-  t.add_wait("x", 5)
-  t.add_wait("y", 1)
-  t.add_wait("z", 3)
-  t.add_wait("x", 15)
-  println(t.printEstadoAtual())
-  t.remove_wait("y")
-  println(t.printEstadoAtual())
-  */
-  var teste = "BT(1)BT(2)r1(x)w2(x)w1(x)C(1)C(2)"
-  var ttt = readString(teste)
-  /*
-  var t = listaToArray(ttt)
-  re_ordenar(t, 0, 1)
-  for(i <- 0 until t.length){
-    println(t(i))
+  
+  println("/////////////////////////////////////// PROGRAMA ////////////////////////////////////////")
+  var rodando = true
+  var isolamento = NivelIsol.READ_UNCOMMIT
+  var msg = "Iniciando programa com isolamento read uncommitted"
+  println("Escolha o nivel de Isolamento:")
+  println("1 - read uncommitted  2 - read commit  3 - repeatable read  4 - serializable")
+  print(": ")
+  val isol = readLine()
+  if(isol.equalsIgnoreCase("2")){
+    msg = "Iniciando programa com isolamento read committed"
+    isolamento = NivelIsol.READ_COMMIT
+  }else if(isol.equalsIgnoreCase("3")){
+
+    msg = "Iniciando programa com isolamento repeatable read"
+    isolamento = NivelIsol.READ_REPEAT
+  }else if(isol.equalsIgnoreCase("4")){
+
+    msg = "Iniciando programa com isolamento serializable"
+    isolamento = NivelIsol.SERIALIZE
   }
-  */
-  val scal2PL = new Escalonador(NivelIsol.SERIALIZE, ttt)
+  println("----------------------------------------------")
+  println(msg)
+  println("Digite o Escalonamento de entrada")
+  print(": ")
+  val escalonamentoStr = readLine()
+  val escal = readString(escalonamentoStr)
+  val scal2PL = new Escalonador(isolamento, escal)
+  scal2PL.grafo_W.init()
   scal2PL.escalonarScheduler()
-  scal2PL.mostrarMomento(8)
-  println(scal2PL.schedulerSerial)
-  //mostraLista(ttt)
-  
-  //val lock:LockTable = new LockTable(NivelIsol.READ_COMMIT)
-  //lock.RL(1, "x")
-  //lock.WL(1, "y")
-  //var k = lock.printEstadoA()
-  //println(k)
-  //lock.UL(1, "x")
-  //lock.RL(1, "x")
-  //println(k.toString())
-  //k = lock.printEstadoA()
-  //println(k)
-  //println(j)
-  /*
-  val k = sizeLista(ttt)
-  print(k.toString()+"\n")
-  
-  var grafo:Wait_For = new Wait_For(5)
-  grafo.init()
-  grafo.add_Aresta(1,2)
-  grafo.add_Aresta(2,3)
-  grafo.add_Aresta(1,3)
-  println(grafo.draw_grafo())
-  */
+  var posA = 0
+  while(rodando){
+    println("----------------------------------------------")
+    scal2PL.mostrarMomento(posA)
+    println("Ordem das operacoes: " + scal2PL.schedulerSerial)
+    println("a -> momento anterior   d -> proximo momento  s -> sair")
+    print(": ")
+    val op = readLine()
+    if(op.equalsIgnoreCase("a")){
+      if(posA > 0){posA = posA - 1}
+      print("\u001b[2J")
+    }else if(op.equalsIgnoreCase("d")){
+      if(posA < scal2PL.momentos.length - 1 ){posA = posA + 1}
+      print("\u001b[2J")
+    }else if(op.equalsIgnoreCase("s")){
+      rodando = false
+      println("saindo....")
+    }
+  }
 }
-/*
-BT(1)r1(x)BT(2)w2(x)r2(y)r1(y)C(1)r2(z)C(2)
- */
+

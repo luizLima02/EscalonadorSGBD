@@ -1122,7 +1122,7 @@ object Main extends App {
   var isolamento = NivelIsol.READ_UNCOMMIT
   var msg = "Iniciando programa com isolamento read uncommitted"
   println("Escolha o nivel de Isolamento:")
-  println("1 - read uncommitted  2 - read commit  3 - repeatable read  4 - serializable")
+  println(" 1 - read uncommitted  2 - read commit  3 - repeatable read  4 - serializable")
   print(": ")
   val isol = readLine()
   if(isol.equalsIgnoreCase("2")){
@@ -1150,11 +1150,11 @@ object Main extends App {
   while(rodando){
     println("----------------------------------------------")
     scal2PL.mostrarMomento(posA)
-    println("-----------------------------------------------------")
-    println("/Entrada: "+escalonamentoStr+" /")
     println("----------------------------------------------")
-    println("/Ordem das operacoes: " + scal2PL.schedulerSerial +" /")
-    println("------------------------------------------------------")
+    println("Entrada: "+escalonamentoStr)
+    println("----------------------------------------------")
+    println("Ordem das operacoes: " + scal2PL.schedulerSerial)
+    println("----------------------------------------------")
     println("a -> momento anterior   d -> proximo momento  s -> sair")
     print(": ")
     val op = readLine()

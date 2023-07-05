@@ -388,7 +388,6 @@ class Wait_Item {
   var items: List[String] = Nil
   var waiting: List[ItemWait] = Nil
   // adiciona um item e um tr que o espera
-
 def add_wait(item: String, tr: Int) = {
     val k = getListaPos(this.items, item)
     if (k == -1) {
@@ -404,6 +403,7 @@ def add_wait(item: String, tr: Int) = {
       }
     }
   }
+  
 def remove_wait(item: String): Int = {
     val k = getListaPos(this.items, item)
     if (k == -1) {
@@ -422,7 +422,6 @@ def remove_wait(item: String): Int = {
       remov
     }
   }
-
 def remove_waiter(item: String, tr: Int) = {
     val k = getListaPos(this.items, item)
     if (k == -1) {} else {
@@ -554,7 +553,7 @@ class LockTable(nv_isol: NivelIsol) extends locksMan {
                       } else if (
                         idItemH.equalsIgnoreCase(
                           D
-                        ) && tipoH == TipoBlock.LEITURA && trIdH == Tr && activeH == false
+                        ) && tipoH == TipoBlock.LEITURA && trIdH == Tr
                       ) {
                         5
                       } else {
@@ -638,7 +637,7 @@ class LockTable(nv_isol: NivelIsol) extends locksMan {
                       } else if (
                         idItemH.equalsIgnoreCase(
                           D
-                        ) && tipoH == TipoBlock.ESCRITA && trIdH == Tr && activeH == false
+                        ) && tipoH == TipoBlock.ESCRITA && trIdH == Tr
                       ) {
                         5
                       } else {
@@ -731,13 +730,7 @@ class LockTable(nv_isol: NivelIsol) extends locksMan {
 }
 
 //salva o estado de um momento especifico do escalonador
-class Momento(
-    operacaoAtual: String,
-    grafo: Wait_For,
-    tabelaBloq: LockTable,
-    mananger: TrManager,
-    waitItem: Wait_Item
-) {
+class Momento(operacaoAtual: String,grafo: Wait_For, tabelaBloq: LockTable, mananger: TrManager,waitItem: Wait_Item) {
   // operacao atual
   val opAtual = operacaoAtual
   // grafo
@@ -794,11 +787,7 @@ class Escalonador(isolamento: NivelIsol, sch: List[String]) {
     this.momentos = add_lista(this.momentos, m)
   }
   /////////////////
-def mostrarMomento(
-      indiceF: Int,
-      indiceI: Int = 0,
-      momentos: List[Momento] = this.momentos
-  ): Unit = {
+  def mostrarMomento(indiceF: Int,indiceI: Int = 0, momentos: List[Momento] = this.momentos ): Unit = {
     if (indiceF > indiceI) {
       momentos match
         case head :: next => mostrarMomento(indiceF, indiceI + 1, next)
@@ -842,7 +831,8 @@ def mostrarMomento(
   def processarItem(Item: String): Int = {
     val it = Item.split("-")
     val operacao = it(0)
-    if (operacao.equalsIgnoreCase("BT")) {
+    if (operacao.equalsIgnoreCase("BT")) 
+    {
       val posicao = getListaPos(this.trMananger.itemID, it(1).toInt)
       if (posicao == -1) {
         trMananger.add_Item(it(1).toInt, this.lastadd, Estado.ATIVA)
@@ -1127,7 +1117,6 @@ def mostrarMomento(
 }
 
 object Main extends App {
-  
   println("/////////////////////////////////////// PROGRAMA ////////////////////////////////////////")
   var rodando = true
   var isolamento = NivelIsol.READ_UNCOMMIT
@@ -1161,7 +1150,11 @@ object Main extends App {
   while(rodando){
     println("----------------------------------------------")
     scal2PL.mostrarMomento(posA)
-    println("Ordem das operacoes: " + scal2PL.schedulerSerial)
+    println("-----------------------------------------------------")
+    println("/Entrada: "+escalonamentoStr+" /")
+    println("----------------------------------------------")
+    println("/Ordem das operacoes: " + scal2PL.schedulerSerial +" /")
+    println("------------------------------------------------------")
     println("a -> momento anterior   d -> proximo momento  s -> sair")
     print(": ")
     val op = readLine()
